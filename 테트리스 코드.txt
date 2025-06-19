@@ -154,43 +154,21 @@ def draw_hold_piece(piece, surface):
     font = pygame.font.SysFont('comicsansms', 30)
     label = font.render('Hold', 1, WHITE)
 
-    box_width = BLOCK_SIZE * 4
-    box_height = BLOCK_SIZE * 4
-    box_x = top_left_x - 140
-    box_y = top_left_y + PLAY_HEIGHT / 2 - 100
-
-    # 1. 'Hold' 텍스트 & 박스
-    surface.blit(label, (box_x, box_y - 40))
-    pygame.draw.rect(surface, GRAY, (box_x, box_y, box_width, box_height), 2)
+    sx = top_left_x - 150
+    sy = top_left_y + PLAY_HEIGHT/2 - 100
+    surface.blit(label, (sx, sy - 40))
 
     if piece is not None:
         shape_format = piece.shape[piece.rotation % len(piece.shape)]
-
-        block_positions = []
         for i, line in enumerate(shape_format):
-            for j, char in enumerate(line):
-                if char == '0':
-                    block_positions.append((j, i))
+            row = list(line)
+            for j, column in enumerate(row):
+                if column == '0':
+                    pygame.draw.rect(surface, piece.color,
+                                     (sx + j*BLOCK_SIZE - BLOCK_SIZE*1.5,
+                                      sy + i*BLOCK_SIZE - BLOCK_SIZE*2,
+                                      BLOCK_SIZE, BLOCK_SIZE), 0)
 
-        if not block_positions:
-            return
-
-        min_x = min(pos[0] for pos in block_positions)
-        max_x = max(pos[0] for pos in block_positions)
-        min_y = min(pos[1] for pos in block_positions)
-        max_y = max(pos[1] for pos in block_positions)
-
-        shape_width = (max_x - min_x + 1) * BLOCK_SIZE
-        shape_height = (max_y - min_y + 1) * BLOCK_SIZE
-
-        offset_x = box_x + (box_width - shape_width) // 2 - min_x * BLOCK_SIZE
-        offset_y = box_y + (box_height - shape_height) // 2 - min_y * BLOCK_SIZE
-
-        for x, y in block_positions:
-            pygame.draw.rect(surface, piece.color,
-                             (offset_x + x * BLOCK_SIZE,
-                              offset_y + y * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE), 0)
 
 def create_grid(locked_positions={}):
     """
@@ -348,7 +326,7 @@ def draw_next_shape(piece, surface):
 
     surface.blit(label, (sx , sy - 40))
 
-def draw_window(surface, grid, score=0, last_score=0, current_piece=None, hold_piece=None):
+def draw_window(surface, grid, score=0, last_score=0, current_piece=None):
 
     """게임 화면 전체를 그립니다."""
     
@@ -386,9 +364,6 @@ def draw_window(surface, grid, score=0, last_score=0, current_piece=None, hold_p
                 pygame.draw.rect(surface, ghost_color,
                     (top_left_x + x * BLOCK_SIZE, top_left_y + y * BLOCK_SIZE,
                     BLOCK_SIZE, BLOCK_SIZE), 0)
-
-    draw_hold_piece(hold_piece, surface)
-
 
     # 게임 플레이 영역 테두리 그리기
     pygame.draw.rect(surface, GRAY, (top_left_x, top_left_y, PLAY_WIDTH, PLAY_HEIGHT), 5)
@@ -479,25 +454,6 @@ def main(win):
 
         # 이벤트 처리
         for event in pygame.event.get():
-            # 🔥 item 2 즉시 작동: 떨어지는 블록 포함 전체 삭제
-            if item_clear_all:
-                locked_positions.clear()
-                current_piece = get_shape()
-                next_piece = get_shape()
-                fall_time = 0
-
-                grid = create_grid(locked_positions)
-                draw_window(screen, grid, score, last_score, current_piece, hold_piece)
-                draw_next_shape(next_piece, screen)
-                pygame.display.update()
-
-                draw_text_middle("BOOM!", 80, RED, screen)
-                pygame.display.update()
-                pygame.time.delay(800)
-
-                item_clear_all = False
-                score += 20
-
             if event.type == pygame.QUIT:
                 run = False
                 pygame.display.quit()
@@ -542,10 +498,9 @@ def main(win):
                             hold_piece, current_piece = current_piece, hold_piece
                             current_piece.x = 5
                             current_piece.y = 0
-                        can_hold = False
+                        can_hold = True
 
-        draw_window(screen, grid, score, last_score, current_piece, hold_piece)
-
+        draw_window(screen, grid, score, last_score, current_piece)
         
         shape_pos = convert_shape_format(current_piece)  # ← 이 줄이 먼저 있어야 함
         # 블록이 바닥이나 다른 블록 위에 도달했을 때
@@ -562,8 +517,7 @@ def main(win):
 
             # ✅ 삭제 직후 그리드 다시 그리기
             grid = create_grid(locked_positions)
-            draw_window(screen, grid, score, last_score, current_piece, hold_piece)
-
+            draw_window(screen, grid, score, last_score, current_piece)
             pygame.display.update()
             pygame.time.delay(100)
 
